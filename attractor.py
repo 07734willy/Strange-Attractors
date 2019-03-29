@@ -60,7 +60,6 @@ def coeff_to_string(coeff):
     att_string = "".join([chr(int((c + 7.7)*10)) for c in coeff])
     return att_string
  
-#@profile
 def pixel_density(xdata, ydata, xres=320, yres=180):
     """ check for density of points in image """
  
@@ -77,8 +76,7 @@ def pixel_density(xdata, ydata, xres=320, yres=180):
         return False
  
     return check_density(render)
-   
-#@profile
+
 def check_density(render, min_fill=1.5):
     """ check if pixel density exceeds threshold """
     filled_pixels = np.count_nonzero(render)
@@ -92,7 +90,6 @@ def check_density(render, min_fill=1.5):
    
     return False
 
-#@profile
 def set_aspect(xdata, ydata, width, height, debug=False, margin=1.1):
     """ get boundaries for given aspect ratio w/h """
     xmin, xrng = get_minmax_rng(xdata)
@@ -118,33 +115,28 @@ def set_aspect(xdata, ydata, width, height, debug=False, margin=1.1):
         print("Rescaled data range | X: {:.2f} | Y: {:.2f} | New aspect ratio: {:.2f}".format(xrng, yrng, xrng/yrng))
  
     return xmin, ymin, xrng, yrng
- 
-#@profile
+
 def get_minmax_rng(data):
     max_val = data.max()
     min_val = data.min()
     data_range = max_val - min_val
  
     return min_val, data_range
- 
-#@profile
+
 def get_index(x, xmin, xrng, xres):
     """ map coordinate to array index """
     return int((x-xmin) * (xres-1) / xrng)
  
-#@profile
 def get_dx(xdata):
     dx = abs(xdata - np.roll(xdata, 1))[1:]
     mdx = np.amax(dx)
     return dx, mdx
  
-#@profile
 def zalpha(z, zmin, zrng, a_min=0):
     """ return alpha based on z depth """
     alpha = a_min + (1-a_min)*(z-zmin)/zrng
     return alpha
 
-#@profile
 def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
  
     xmin, ymin, xrng, yrng = set_aspect(xdata, ydata, xres, yres, debug=True)
@@ -170,22 +162,15 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
     ypix = (1-dys/mdy)*alpha*zscaled[clip]
     zpix = (1-dzs/mdz)*alpha*zscaled[clip]
 
-    render = sum_alpha(yres, xres, xscaled, yscaled, xpix, ypix, zpix)
+    render = sum_alpha(yres, xres, yscaled, xscaled, xpix, ypix, zpix)
+    render = np.clip(render, None, 1)
 
-    #for k in range(3):
-    #    render[:, :, k][np.where(render[:, :, k] > 1)] = 1
-    render = np.clip(render, a_max=1)
-
-    fname = "{}-{}K-{}.png".format(coeff_to_string(coeff), T_RENDER/1000, plane)
+    fname = "{}-{}K-{}.png".format(coeff_to_string(coeff), T_RENDER//1000, plane)
     plt.imsave(fname, render, dpi=300)
     end = time.time()
     print("Saved " + fname)
     print("{:.2f} sec".format(end-start))
 
-
-
-
-#@profile
 def main():
     global start, ATT_COEFFS, N_ATTRACTORS, coeff
     print("Searching for attractors | Mode: {}".format(MODE))
@@ -200,10 +185,9 @@ def main():
             raise ValueError("Only 'Cubic' mode is currently supported")
 
         x, y, z = 0, 0, 0
-     
         xl, yl, zl = iterator(x, y, z, coeff, T_SEARCH, 10)
         
-        if xl[-1] <= 10:
+        if zl[-1] <= 10:
             if pixel_density(xl, yl):
                 ATT_COEFFS.append(coeff)
                 N_ATTRACTORS += 1
@@ -213,15 +197,11 @@ def main():
      
         start = time.time()
         print("\nAttractor: {} | {}/{}".format(coeff_to_string(coeff), i+1, MAX_ATTRACTORS))
-     
-        x, y, z = 0, 0, 0
-        xl = np.zeros(T_RENDER)
-        yl = np.zeros(T_RENDER)
-        zl = np.zeros(T_RENDER)
-       
         print("Iterating {} steps".format(T_RENDER))
         
+        x, y, z = 0, 0, 0
         xl, yl, zl = iterator(x, y, z, coeff, T_IDX)
+        x, y, z = xl[-1], yl[-1], zl[-1]
         
         check = not np.isnan(x+y+z) # check for overflow
      
@@ -243,7 +223,6 @@ def main():
             print("Error during calculation")
        
         i += 1
-
 
 if __name__ == "__main__":
     main()
