@@ -4,7 +4,7 @@ import numpy as np
 import ctypes
 import math
 
-#@profile
+@profile
 def iterator(x, y, z, coeff, n, terms):
     """ main iteration step function """
  
@@ -31,7 +31,7 @@ def quadterms(x, y, z):
         x**2, y**2, z**2]
         )
  
-#@profile
+@profile
 def cubicterms(x, y, z):
     """ cubic terms """
     return np.asarray(
@@ -47,7 +47,7 @@ def coeff_to_string(coeff):
     att_string = ''.join([chr(int((c + 7.7)*10)) for c in coeff])
     return att_string
  
-#@profile
+@profile
 def pixel_density(xdata, ydata, xres=320, yres=180):
     """ check for density of points in image """
  
@@ -65,7 +65,7 @@ def pixel_density(xdata, ydata, xres=320, yres=180):
  
     return check_density(render)
    
-#@profile
+@profile
 def check_density(render, min_fill=1.5):
     """ check if pixel density exceeds threshold """
     filled_pixels = np.count_nonzero(render)
@@ -79,7 +79,7 @@ def check_density(render, min_fill=1.5):
    
     return False
 
-#@profile
+@profile
 def set_aspect(xdata, ydata, width, height, debug=False, margin=1.1):
     """ get boundaries for given aspect ratio w/h """
     xmin, xrng = get_minmax_rng(xdata)
@@ -106,7 +106,7 @@ def set_aspect(xdata, ydata, width, height, debug=False, margin=1.1):
  
     return xmin, ymin, xrng, yrng
  
-#@profile
+@profile
 def get_minmax_rng(data):
     max_val = data.max()
     min_val = data.min()
@@ -114,24 +114,24 @@ def get_minmax_rng(data):
  
     return min_val, data_range
  
-#@profile
+@profile
 def get_index(x, xmin, xrng, xres):
     """ map coordinate to array index """
     return int((x-xmin)/xrng * (xres-1))
  
-#@profile
+@profile
 def get_dx(xdata):
     dx = abs(xdata - np.roll(xdata, 1))[1:]
     mdx = np.amax(dx)
     return dx, mdx
  
-#@profile
+@profile
 def zalpha(z, zmin, zrng, a_min=0):
     """ return alpha based on z depth """
     alpha = a_min + (1-a_min)*(z-zmin)/zrng
     return alpha
  
-#@profile
+@profile
 def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
  
     xmin, ymin, xrng, yrng = set_aspect(xdata, ydata, xres, yres, debug=True)
@@ -159,11 +159,19 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
         rx = (1-dxs/mdx)*alpha*Zs[clip]
         ry = (1-dys/mdy)*alpha*Zs[clip]
         rz = (1-dzs/mdz)*alpha*Zs[clip]
-        
+
+        sum_alpha = import_sum_alpha()
+        render3 = sum_alpha(yres, xres, Is, Js, rx, ry, rz)
+
+        """
         render2 = np.zeros((yres, xres, 3))
         np.add.at(render2, (Is, Js, [0]*len(rx)), rx)
         np.add.at(render2, (Is, Js, [1]*len(ry)), ry)
         np.add.at(render2, (Is, Js, [2]*len(rz)), rz)
+
+        #print(render2[:2,:2,:2], render3[:2,:2,:2])
+        assert(np.allclose(render2, render3))
+        """
 
         if SLOW_MODE:
             for i, (x, y, z, dx, dy, dz) in enumerate(zip(xdata[1:], ydata[1:], zdata[1:], dxs, dys, dzs)):
@@ -187,7 +195,7 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
         print('Invalid value')
         raise
     
-    render = render2
+    render = render3
     for k in range(3):
         render[:, :, k][np.where(render[:, :, k] > 1)] = 1
  
@@ -197,12 +205,13 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
     print('Saved ' + fname)
     print('%.2f sec' % (end-start))
 
+
 def import_iterator(libpath="./iterator.so"):
     iterator = ctypes.cdll.LoadLibrary(libpath).iterator
     def to_ctype(arr):
         arr_type = ctypes.POINTER(ctypes.c_double * len(arr))
         return arr.astype(np.float64).ctypes.data_as(arr_type)
-
+    
     def wrap_iterator(start, coeff, repeat, radius=0):
         #iterator.restype = np.ctypeslib.ndpointer(dtype=ctypes.c_double, shape=(3*repeat,))
         iterator.restype = ctypes.POINTER(ctypes.c_double * (3 * repeat))
@@ -213,9 +222,35 @@ def import_iterator(libpath="./iterator.so"):
 
         res = iterator(start, coeff, repeat, ctypes.c_double(radius), out).contents
         return np.array(res).reshape((repeat, 3)).T
+    
     return wrap_iterator
- 
-#@profile
+
+def import_sum_alpha(libpath="./iterator.so"):
+    sum_alpha = ctypes.cdll.LoadLibrary(libpath).sum_alpha
+    def to_double_ctype(arr):
+        arr_type = ctypes.POINTER(ctypes.c_double * len(arr))
+        return arr.astype(np.float64).ctypes.data_as(arr_type)
+    def to_int_ctype(arr):
+        arr_type = ctypes.POINTER(ctypes.c_int32 * len(arr))
+        return arr.astype(np.int32).ctypes.data_as(arr_type)
+    
+    def wrap_sum_alpha(yres, xres, Is, Js, rx, ry, rz):
+        sum_alpha.restype = ctypes.POINTER(ctypes.c_double * (yres * xres * 3))
+        size = len(Is)
+        
+        out = to_double_ctype(np.zeros(yres * xres * 3))
+        Is, Js = to_int_ctype(Is), to_int_ctype(Js)
+        rx = to_double_ctype(rx)
+        ry = to_double_ctype(ry)
+        rz = to_double_ctype(rz)
+
+        res = sum_alpha(yres, xres, size, Is, Js, rx, ry, rz, out).contents
+        return np.array(res).reshape((yres, xres, 3))
+    
+    return wrap_sum_alpha
+
+
+@profile
 def main():
     global coeff, T_RENDER, start, SLOW_MODE
 

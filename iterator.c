@@ -42,3 +42,12 @@ double* iterator(double* start, double* coeffs, int repeat, double radius, doubl
 	return out;
 }
 
+double* sum_alpha(int yres, int xres, int len, int* Is, int* Js, double* rx, double* ry, double* rz, double* out) {
+	for (int i = 0; i < len; i++) {
+		int pos = xres * 3 * Is[i] + 3 * Js[i];
+		out[pos + 0] += rx[i];
+		out[pos + 1] += ry[i];
+		out[pos + 2] += rz[i];
+	}
+	return out;
+}
