@@ -1,6 +1,6 @@
 all:
-	gcc -c -fPIC -Ofast -funsafe-math-optimizations iterator.c -o iterator.o
-	gcc -shared -Wl,-soname,iterator.so -o iterator.so iterator.o
+	gcc -c -fPIC -Ofast -funsafe-math-optimizations helper.c -o helper.o
+	gcc -shared -Wl,-soname,helper.so -o helper.so helper.o
 
 clean:
-	rm iterator.o
+	$(RM) helper.o helper.so
