@@ -1,8 +1,8 @@
-import time
-import matplotlib.pyplot as plt
+from PIL import Image
 import numpy as np
 import ctypes
 import math
+import time
 
 N_ATTRACTORS = 0                # initialize number of attractors
 MAX_ATTRACTORS = 1              # number of attractors to search for
@@ -166,7 +166,8 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
     render = np.clip(render, None, 1)
 
     fname = "{}-{}K-{}.png".format(coeff_to_string(coeff), T_RENDER//1000, plane)
-    plt.imsave(fname, render, dpi=300)
+    
+    Image.fromarray((render * 255).astype(np.uint8)).save(fname, compress_level=1)
     end = time.time()
     print("Saved " + fname)
     print("{:.2f} sec".format(end-start))
