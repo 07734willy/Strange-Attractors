@@ -6,7 +6,8 @@
 #define T_IDX ((int)(T_RENDER/100))
 
 #define RADIUS 10
-#define MIN_DENSITY 0.015
+#define MIN_DENSITY (0.15 / 1)
+#define DENSITY_SCALE 10
 
 #define NUM_POSITIONS (T_RENDER - T_IDX)
 

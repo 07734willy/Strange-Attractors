@@ -3,7 +3,7 @@
 #include <string.h>
 #include <fenv.h>
 #include "attractor.h"
-#include "render.h"
+#include "transform.h"
 
 void printSlice(double *array, int start, int end, int stride) {
 	printf("[");
@@ -40,6 +40,14 @@ int generateCoeffs(double *dest) {
 	return 1;
 }
 
+void printCoeffs(double *coeffs) {
+	printf("Coefficients: ");
+	for (int i = 0; i < 60; i++) {
+		printf("%c", (int)(coeffs[i] * 10 + 12.1) + 'A');
+	}
+	printf("\n");
+}
+
 double evaluateStep(double x, double y, double z, double *coeffs) {
 	double sum;
 	sum =  coeffs[0];
@@ -67,7 +75,7 @@ double evaluateStep(double x, double y, double z, double *coeffs) {
 	return sum;
 }
 
-int validTrajectory(double *coeffs, double radius) {
+int trajectoryEscapes(double *coeffs, double radius) {
 	double x = 0, y = 0, z = 0;
 
 	for (int i = 0; i < T_SEARCH; i++) {
@@ -75,17 +83,17 @@ int validTrajectory(double *coeffs, double radius) {
 		double ynew = evaluateStep(x, y, z, coeffs + 20);
 		double znew = evaluateStep(x, y, z, coeffs + 40);
 		x = xnew, y = ynew, z = znew;
-		if (x*x + y*y + z*z > radius*radius)
-			return 0;
+		if (xnew*xnew + ynew*ynew + znew*znew > radius*radius)
+			return 1;
 	}
-	return 1;
+	return 0;
 }
 
-int trajectoryIterate(double* dest, double *coeffs) {
+int trajectoryIterate(double* dest, double *coeffs, int start, int end) {
 	double x = 0, y = 0, z = 0;
 
 	feclearexcept(FE_OVERFLOW);
-	for (int i = 0; i < T_IDX; i++) {
+	for (int i = 0; i < start; i++) {
 		double xnew = evaluateStep(x, y, z, coeffs);
 		double ynew = evaluateStep(x, y, z, coeffs + 20);
 		double znew = evaluateStep(x, y, z, coeffs + 40);
@@ -97,7 +105,7 @@ int trajectoryIterate(double* dest, double *coeffs) {
 		return 0;
 	}
 
-	for (int i = 0; i < 3 * (T_RENDER - T_IDX); i += 3) {
+	for (int i = 0; i < 3 * (end - start); i += 3) {
 		dest[i + 0] = evaluateStep(x, y, z, coeffs);
 		dest[i + 1] = evaluateStep(x, y, z, coeffs + 20);
 		dest[i + 2] = evaluateStep(x, y, z, coeffs + 40);
@@ -109,19 +117,26 @@ int trajectoryIterate(double* dest, double *coeffs) {
 
 double* generateAttractor(char *seed) {
 	double *coeffs = malloc(60 * sizeof(double));
+	double *trajectory = malloc(3 * T_SEARCH * sizeof(double));
+	double *positions = malloc(3 * (T_RENDER - T_IDX) * sizeof(double));
 
 	if (seed == NULL || !coeffsFromSeed(coeffs, seed)) {
-		do {
+		while (1) {
 			generateCoeffs(coeffs);
-		} while (!validTrajectory(coeffs, RADIUS));
+			//coeffsFromSeed(coeffs, seed);
+			if (trajectoryEscapes(coeffs, RADIUS)) {
+				continue;
+			}
+			trajectoryIterate(trajectory, coeffs, 0, T_SEARCH);
+			if (checkPixelDensity(trajectory) && trajectoryIterate(positions, coeffs, T_IDX, T_RENDER)) {
+				printCoeffs(coeffs);
+				printSlice(positions, 0, 60, 1);
+
+				return positions;
+			}
+		}
 	}
 
-	double *positions = malloc(3 * (T_RENDER - T_IDX) * sizeof(double));
-	trajectoryIterate(positions, coeffs);
-
-	printSlice(positions, 0, 60, 1);
-
-	return positions;
 }
 
 

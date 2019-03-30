@@ -11,21 +11,20 @@ double xmin, ymin, zmin;
 double xmax, ymax, zmax;
 double dxmax, dymax, dzmax;
 
-void setRangeLimits(double* positions) {
+void setRangeLimits(double* positions, int length) {
 	xmin = xmax = positions[0];
 	ymin = ymax = positions[1];
 	zmin = zmax = positions[2];
 	dxmax = dymax = dzmax = -DBL_MAX;
 
-	for (int i = 3; i < 3 * NUM_POSITIONS; i += 3) {
+	for (int i = 3; i < 3 * length; i += 3) {
 		double x = positions[i + 0];
 		double y = positions[i + 1];
 		double z = positions[i + 2];
 
 		if (x < xmin)
 			xmin = x;
-		else if (x > xmax)
-			xmax = x;
+		else if (x > xmax) xmax = x;
 		if (y < ymin)
 			ymin = y;
 		else if (y > ymax)
@@ -48,18 +47,36 @@ void setRangeLimits(double* positions) {
 	}
 }
 
-void scalePositions(double *positions) {
-	for (int i = 0; i < 3 * NUM_POSITIONS; i += 3) {
-		positions[i + 0] = (positions[i + 0] - xmin) * (XRES-1.0) / (xmax-xmin);
-		positions[i + 1] = (positions[i + 1] - ymin) * (YRES-1.0) / (ymax-ymin);
+void scalePositions(double *positions, int length, int xres, int yres) {
+	for (int i = 0; i < 3 * length; i += 3) {
+		positions[i + 0] = (positions[i + 0] - xmin) * (xres-1.0) / (xmax-xmin);
+		positions[i + 1] = (positions[i + 1] - ymin) * (yres-1.0) / (ymax-ymin);
 		positions[i + 2] = (positions[i + 2] - zmin) * (1.0-ALPHA_MIN) / (zmax-zmin) + ALPHA_MIN;
 	}
 }
 
+int checkPixelDensity(double* positions) {
+	setRangeLimits(positions, T_SEARCH);
+	scalePositions(positions, T_SEARCH, XRES/10, YRES/10);
+
+	char buffer[(XRES/10) * (YRES/10)] = {0};
+	int count = 0;
+
+	for (int i = 0; i < 3 * T_SEARCH; i += 3) {
+		int x = (int)positions[i + 0];
+		int y = (int)positions[i + 1];
+		
+		int pos = (XRES/10) * y + x;
+		count += !buffer[pos];
+		buffer[pos] = 1;
+	}
+	return count >= (XRES/10) * (YRES/10) * MIN_DENSITY;
+}
+
 void sumAlpha(double *dest, double *positions) {
 	for (int i = 3; i < 3 * NUM_POSITIONS; i += 3) {
-		double x = (int)positions[i + 0];
-		double y = (int)positions[i + 1];
+		int x = (int)positions[i + 0];
+		int y = (int)positions[i + 1];
 		double z = positions[i + 2];
 
 		int pos = 3 * XRES * y + 3 * x;
@@ -94,11 +111,11 @@ void positionsToBGRA(uint8_t *dest, double *positions) {
 	
 	memcpy(transformed, positions, 3 * NUM_POSITIONS * sizeof(double));
 	
-	//printSlice(transformed, 0, 90, 1);
-	setRangeLimits(transformed);
-	scalePositions(transformed);
+	printSlice(transformed, 0, 90, 1);
+	setRangeLimits(transformed, NUM_POSITIONS);
+	scalePositions(transformed, NUM_POSITIONS, XRES, YRES);
 
-	//printSlice(transformed, 0, 90, 1);
+	printSlice(transformed, 0, 90, 1);
 	sumAlpha(channels, transformed);
 	rgbToBGRA(dest, channels);
 	
