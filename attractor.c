@@ -130,13 +130,12 @@ double* generateAttractor(char *seed) {
 			trajectoryIterate(trajectory, coeffs, 0, T_SEARCH);
 			if (checkPixelDensity(trajectory) && trajectoryIterate(positions, coeffs, T_IDX, T_RENDER)) {
 				printCoeffs(coeffs);
-				printSlice(positions, 0, 60, 1);
-
 				return positions;
 			}
 		}
 	}
-
+	trajectoryIterate(positions, coeffs, T_IDX, T_RENDER);
+	return positions;
 }
 
 

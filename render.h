@@ -12,7 +12,7 @@
 #define WIDTH 1800
 #define HEIGHT 900
 
-#define ALPHA 0.015
+#define ALPHA 0.010
 #define ALPHA_MIN 0.25
 
 #endif

@@ -75,14 +75,24 @@ int main(int argc,char **argv) {
 	initXWindows();
 	
 	srand(2234);
+	srand(1111); // random blue patches
+	srand(1000); // same
+	srand(3215); // kinda neat
+	srand(4440); // REALLY BLUE
+	srand(7540); // mostly empty
+	srand(3452);
 	char *data = malloc(XRES * YRES * 4);
 	XImage *img = XCreateImage(display, visual, DefaultDepth(display, screen), ZPixmap,
 			0, data, XRES, YRES, 32, 0);
 
-	updateXImage(img, 20, 20, 200);
+	updateXImage(img, 200, 20, 20);
 
 	char seed[] = "ODPUMUHYVHMSYKLVJQHGPHEGIJKPFCFPQIFAUNOKFJFCSJGQUCFFKLYESOQL";
-	double *attractor = generateAttractor(NULL);
+	char seed2[] = "KUIGFJAQPTYSSAIWUTSYRXMFFMNVBMLLJTUOGUFXQHQKHCJEVCGODSTIHJEJ";
+	char seed3[] = "KLYCUAVJBAQBNUDRICOHHKPVIHIBSPIDDHHBJFKLFEOVBTPJWGSGRKCARNBM";
+	char seed4[] = "PIIGEDYLHLKWHQXFCUPHPRNGSBIYBYSTKDAOGCCONONUGMDKJSRBMFJFJSGK";
+
+	double *attractor = generateAttractor(seed4);
 
 	printf("Attractor constructed\n");
 	positionsToBGRA(img->data, attractor);
