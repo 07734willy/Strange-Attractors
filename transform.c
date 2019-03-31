@@ -5,6 +5,7 @@
 #include <math.h>
 #include "attractor.h"
 #include "render.h"
+#include "transform.h"
 
 double xmin, ymin, zmin;
 double xmax, ymax, zmax;
@@ -58,6 +59,19 @@ void sumAlpha(double *dest, double *positions, int length, int xres, int yres) {
 	}
 }
 
+void calcRGB(double *dest, double *positions, int length, int xres, int yres) {
+	double limit = sqrt(SQR(xmax-xmin) + SQR(ymax-ymin) + SQR(zmax-zmin));
+	for (int i = 3; i < 3 * length; i += 3) {
+		double dx = fabs(positions[i + 0] - positions[i - 3]);
+		double dy = fabs(positions[i + 1] - positions[i - 2]);
+		double dz = fabs(positions[i + 2] - positions[i - 1]);
+
+		dest[i + 0] = (1-dx/limit);
+		dest[i + 1] = (1-dy/limit);
+		dest[i + 2] = (1-dz/limit);
+	}
+}
+
 void rgbToBGRA(uint8_t *dest, double *channels) {
 	//int count = 0;
 	for (int i = 0; i < XRES * YRES; i++) {
@@ -93,6 +107,17 @@ void positionsToBGRA(uint8_t *dest, double *positions) {
 	
 	free(transformed);
 	free(channels);
+}
+
+double* positionsToRGB(double* positions) {
+	double *transformed = malloc(3 * NUM_POSITIONS * sizeof(double));
+	double *channels = calloc(3 * NUM_POSITIONS, sizeof(double));
+
+	setRangeLimits(positions, NUM_POSITIONS);
+	
+	calcRGB(channels, positions, NUM_POSITIONS, XRES, YRES);
+
+	return channels;
 }
 
 int checkPixelDensity(double* positions) {

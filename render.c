@@ -1,6 +1,5 @@
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <unistd.h>
+#include <GL/glew.h>
+#include <SDL.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -8,72 +7,68 @@
 #include "attractor.h"
 #include "transform.h"
 
-Display *display;
-int screen;
-Window root;
-Visual *visual;
-Window win;
 
-void updateXImage(XImage *img, uint8_t r, uint8_t g, uint8_t b) {
-	for (int i = 0; i < 4 * img->width * img->height; i += 4) {
-		img->data[i + 0] = b;
-		img->data[i + 1] = g;
-		img->data[i + 2] = r;
+void render(SDL_Window* window, double *attractor, double *rgb) {
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable (GL_BLEND);
+	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+	
+	double dampen = 0.7;
+	glBlendColor(ALPHA * dampen, ALPHA * dampen, ALPHA * dampen, 1);
+	glBlendFunc(GL_CONSTANT_COLOR, GL_ONE);
+	glBegin(GL_POINTS);
+	for (int i = 0; i < 3 * NUM_POSITIONS; i += 3) {
+		glColor4d(rgb[i + 0],
+				rgb[i + 1],
+				rgb[i + 2],
+				1);
+		glVertex3d(attractor[i + 0], 
+				attractor[i + 1],
+				attractor[i + 2]);
 	}
+	glEnd();
+
+	glFlush();
+	SDL_GL_SwapWindow(window);
 }
 
-void initXWindows(void) {
-	display = XOpenDisplay(NULL);
-	screen = DefaultScreen(display);
-	root = RootWindow(display, screen);
-	visual = DefaultVisual(display, screen);
-	win = XCreateSimpleWindow(display, root, 50, 50, WIDTH, HEIGHT, 1, 0, 0);
-	
-	int eventMask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-	XGrabPointer(display, win, False, eventMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
-	XSelectInput(display, win, ExposureMask | KeyPressMask | eventMask);
-	
-	XMapWindow(display, win);
-	XFlush(display);
-}
-
-void renderXImage(XImage *img) {
-	GC defaultGC = DefaultGC(display, screen);
-	int mouseDown = 0;
-	
-	XEvent event;
-	while(1) {
-		XNextEvent(display, &event);
-		switch (event.type) {
-			case KeyPress: return;
-			case Expose:
-				XPutImage(display, win, defaultGC, img, 0, 0, (WIDTH-XRES)/2, (HEIGHT-YRES)/2, XRES, YRES);
-				break;
-			case ButtonPress:
-				if (event.xbutton.button == Button1)
-					mouseDown = 1;
-				break;
-			case ButtonRelease:
-				if (event.xbutton.button == Button1)
-					mouseDown = 0;
-				break;
-			case MotionNotify:
-				if (mouseDown && XEventsQueued(display, QueuedAfterFlush) < 1) {
-					int x = event.xmotion.x;
-					int y = event.xmotion.y;
-					updateXImage(img, x & 255, 20, y & 255);
-					XPutImage(display, win, defaultGC, img, 0, 0, (WIDTH-XRES)/2, (HEIGHT-YRES)/2, XRES, YRES);
-				}
-				break;
-			default: break;
+void mainLoop(SDL_Window* window, double *attractor) {
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glPointSize(1.0);
+	//glMatrixMode(GL_PROJECTION);
+	//glTranslated(0, 0, 1);
+	double* rgb = positionsToRGB(attractor);
+	int dx, dy;
+	while (1) {
+		SDL_Event ev;
+		while (SDL_PollEvent(&ev)) {
+			switch (ev.type) {
+				case SDL_QUIT:
+					return;
+				case SDL_MOUSEMOTION:
+					SDL_GetRelativeMouseState(&dx, &dy);
+					double delta = 1.0;
+					glRotated(dx * delta, 0, 1, 0);
+					//glRotated(-dy * delta, 1, 0, 0);
+					break;
+				default: break;
+			}
 		}
+		render(window, attractor, rgb);
 	}
 }
 
+int main(int argc, char* argv[]) {
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Window* window = SDL_CreateWindow("Point Cloud",
+			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			XRES, YRES,
+			SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
-int main(int argc,char **argv) {
-	initXWindows();
-	
+	GLenum  glew_status = glewInit();
+
 	srand(2234);
 	srand(1111); // random blue patches
 	srand(1000); // same
@@ -81,25 +76,21 @@ int main(int argc,char **argv) {
 	srand(4440); // REALLY BLUE
 	srand(7540); // mostly empty
 	srand(3452);
-	char *data = malloc(XRES * YRES * 4);
-	XImage *img = XCreateImage(display, visual, DefaultDepth(display, screen), ZPixmap,
-			0, data, XRES, YRES, 32, 0);
-
-	updateXImage(img, 200, 20, 20);
 
 	char seed[] = "ODPUMUHYVHMSYKLVJQHGPHEGIJKPFCFPQIFAUNOKFJFCSJGQUCFFKLYESOQL";
 	char seed2[] = "KUIGFJAQPTYSSAIWUTSYRXMFFMNVBMLLJTUOGUFXQHQKHCJEVCGODSTIHJEJ";
 	char seed3[] = "KLYCUAVJBAQBNUDRICOHHKPVIHIBSPIDDHHBJFKLFEOVBTPJWGSGRKCARNBM";
 	char seed4[] = "PIIGEDYLHLKWHQXFCUPHPRNGSBIYBYSTKDAOGCCONONUGMDKJSRBMFJFJSGK";
 
-	double *attractor = generateAttractor(seed4);
+	double *attractor = generateAttractor(seed3);
 
 	printf("Attractor constructed\n");
-	positionsToBGRA(img->data, attractor);
-	printf("Attractor transformed\n");
+	//positionsToBGRA(img->data, attractor);
+	//printf("Attractor transformed\n");
 
-	renderXImage(img);
-
-	XCloseDisplay(display);
-	return 0;
+	mainLoop(window, attractor);
+	
+	SDL_GL_DeleteContext(glcontext);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 }
