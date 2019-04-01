@@ -7,7 +7,7 @@
 **.swo
 
 # Kernprof profiling info
-**.prof
+**.lprof
 
 # Image files
 **.png
