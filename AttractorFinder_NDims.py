@@ -5,6 +5,7 @@ import numpy as np
 from numpy import tensordot as tdot
 
 def N_iterator(coordtrans,coefficients,d):
+	""" single iteration """
 
 	f = np.zeros(d+1)
 	for X in range(d):
@@ -82,6 +83,7 @@ def get_index(x, xmin, xrng, xres):
 	return int((x-xmin)/xrng * (xres-1))
 
 def get_dx(xdata):
+	""" distance between iterates for color mapping """
 	dx = abs(xdata - np.roll(xdata, 1))[1:]
 	mdx = max(dx)
 	return dx, mdx
@@ -125,7 +127,6 @@ def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 				J = get_index(x, xmin, xrng, xres)
 				I = get_index(y, ymin, yrng, yres)
 
-				# pre-z_alpha
 				z_alpha = zalpha(z, zmin, zrng, a_min=0.25)
 				render[I, J, 0] += (1-dx/mdx)*alpha*z_alpha
 				render[I, J, 1] += (1-dy/mdy)*alpha*z_alpha
@@ -239,7 +240,6 @@ for i, (coefficients, seed) in enumerate(zip(ATT_COEFFS,ATT_SEED)):
 		its_per_sec = T_RENDER/(end-start)
 		print 'Finished iteration: %.1f sec | %d iterations per second' % (
 			(end-start), its_per_sec)
-		print 'Projected time for full render: %.2f minutes' % (10e6 / (60*its_per_sec))
 
 		save_image(iterates)
 
