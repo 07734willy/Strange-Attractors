@@ -4,12 +4,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import tensordot as tdot
 
-def N_iterator(coordtrans,coefficients,d):
+"""
+code for finding and saving images of strange attractors in n
+dimensions. currently using cubic order for the equations
+"""
+
+def N_iterator(coordinates,coefficients,d):
 	""" single iteration """
+
+	coordinates = reshape_coordinates(coordinates)
 
 	f = np.zeros(d+1)
 	for X in range(d):
-		f[X+1] = (coordtrans*coefficients[X, :, :, :]).sum()
+		f[X+1] = (coordinates*coefficients[X, :, :, :]).sum()
 	f[0] = 1
 
 	return f
@@ -93,6 +100,10 @@ def zalpha(z, zmin, zrng, a_min=0):
 	alpha = a_min + (1-a_min)*(z-zmin)/zrng
 	return alpha
 
+def reshape_coordinates(coordinates):
+	""" reshape coordinates to align with coefficient array """
+	return tdot(coordinates, tdot(coordinates, coordinates, axes=0), axes=0)
+
 def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 
 	dims = ['x','y','z','u','v','w','q','r','s','t']
@@ -135,6 +146,7 @@ def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 		except ValueError:
 			print 'Invalid value'
 
+		# set pixel that exceed max RGB to 1
 		for k in range(3):
 			render[:, :, k][np.where(render[:, :, k] > 1)] = 1
 
@@ -149,7 +161,6 @@ def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 		print 'Saved ' + fname
 		print '%.2f sec' % (end-start)
 
-
 N_ATTRACTORS = 0 				# initialize number of attractors
 MAX_ATTRACTORS = 20	 			# number of attractors to search for
 DIMENSION = 8
@@ -157,8 +168,8 @@ T_SEARCH = 2000 				# number of iterations to perform during search
 T_RENDER = int(5e6) 			# number of iterations to perform during render
 T_IDX = int(0.01 * T_RENDER) 	# first index after transient
 
-ATT_COEFFS = [] 
-ATT_SEED   = []				# list for storing coefficients
+ATT_COEFFS = [] # list for storing coefficients           
+ATT_SEED   = [] # list for storing seeds
 
 print 'Searching for attractors | Dimension: %d' % DIMENSION
 while N_ATTRACTORS < MAX_ATTRACTORS:
@@ -196,8 +207,7 @@ while N_ATTRACTORS < MAX_ATTRACTORS:
 	out_of_bounds = False
 
 	for t in range(T_SEARCH):
-		coordtrans = tdot(coordinates, tdot(coordinates, coordinates,axes=0), axes=0)
-		coordinates = N_iterator(coordtrans, coefficients, d)
+		coordinates = N_iterator(coordinates, coefficients, d)
 		iterates[t, :] = coordinates[1:]
 		r = (coordinates[1:]*coordinates[1:]).sum()
 
@@ -225,15 +235,13 @@ for i, (coefficients, seed) in enumerate(zip(ATT_COEFFS,ATT_SEED)):
 	print 'Iterating %d steps' % T_RENDER
 	# calculate initial set of points
 	for t in range(T_IDX):
-		coordtrans = tdot(coordinates, tdot(coordinates, coordinates, axes=0), axes=0)
-		coordinates = N_iterator(coordtrans,coefficients,d)
+		coordinates = N_iterator(coordinates,coefficients,d)
 		iterates[t,:] = coordinates[1:]
 	check = np.isnan(iterates[t,:].sum()) # check for overflow
 
 	if not check:
 		for t in range(T_IDX,T_RENDER):
-			coordtrans = tdot(coordinates,tdot(coordinates,coordinates,axes=0),axes=0)
-			coordinates = N_iterator(coordtrans,coefficients,d)
+			coordinates = N_iterator(coordinates,coefficients,d)
 			iterates[t,:] = coordinates[1:]
 	
 		end = time.time()
