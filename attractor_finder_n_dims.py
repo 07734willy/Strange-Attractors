@@ -111,8 +111,8 @@ def make_coefficients(d):
 
 	for X in range(d):
 		for i in range(d + 1):
-			for j in range(d + 1):
-				for k in range(d + 1):
+			for j in range(i, d + 1):
+				for k in range(j, d + 1):
 					if i == j and i == k:
 						coefficients[X, i, j, k] = np.random.uniform(-10, 11)/(10+2*d)
 					elif i != j and j != k and k != i:
