@@ -1,17 +1,15 @@
+from argparse import ArgumentParser, ArgumentTypeError
 from PIL import Image
 import numpy as np
 import ctypes
-import math
 import time
 
-N_ATTRACTORS = 0                # initialize number of attractors
 MAX_ATTRACTORS = 1              # number of attractors to search for
  
 T_SEARCH = 2000                 # number of iterations to perform during search
 T_RENDER = int(10e6)            # number of iterations to perform during render
 T_IDX = int(0.01 * T_RENDER)    # first index after transient
  
-ATT_COEFFS = []                 # list for storing coefficients
 MODE = "Cubic"
 
 
@@ -60,7 +58,7 @@ def coeff_to_string(coeff):
     att_string = "".join([chr(int((c + 7.7)*10)) for c in coeff])
     return att_string
  
-def pixel_density(xdata, ydata, xres=320, yres=180):
+def pixel_density(xdata, ydata, coeff, xres=320, yres=180):
     """ check for density of points in image """
  
     xmin, ymin, xrng, yrng = set_aspect(xdata, ydata, xres, yres)
@@ -75,9 +73,9 @@ def pixel_density(xdata, ydata, xres=320, yres=180):
         print("Invalid value (pixel density)")
         return False
  
-    return check_density(render)
+    return check_density(render, coeff)
 
-def check_density(render, min_fill=1.5):
+def check_density(render, coeff, min_fill=1.5):
     """ check if pixel density exceeds threshold """
     filled_pixels = np.count_nonzero(render)
     fill_percentage = 100 * filled_pixels/np.size(render)
@@ -137,8 +135,9 @@ def zalpha(z, zmin, zrng, a_min=0):
     alpha = a_min + (1-a_min)*(z-zmin)/zrng
     return alpha
 
-def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
+def save_image(xdata, ydata, zdata, coeff, plane, alpha=0.025, xres=3200, yres=1800):
  
+    start = time.time()
     xmin, ymin, xrng, yrng = set_aspect(xdata, ydata, xres, yres, debug=True)
     zmin, zrng = get_minmax_rng(zdata)
 
@@ -172,12 +171,17 @@ def save_image(xdata, ydata, zdata, plane, alpha=0.025, xres=3200, yres=1800):
     print("Saved " + fname)
     print("{:.2f} sec".format(end-start))
 
-def main():
-    global start, ATT_COEFFS, N_ATTRACTORS, coeff
+
+def coeff_from_str(word):
+    """convert alphabetical values to coefficients"""
+    return np.array([(ord(c)-ord("A")-12)/10 for c in word.upper()])
+
+def search_attractors(max_attractors):
     print("Searching for attractors | Mode: {}".format(MODE))
 
-    np.random.seed(2)
-    while N_ATTRACTORS < MAX_ATTRACTORS:
+    att_coeffs = []
+    n_attractors = 0
+    while n_attractors < max_attractors:
         # pick random coefficients in the range (-1.2,1.2)
         if MODE == "Cubic":
             coeff = np.random.randint(-12, 13, 60)/10
@@ -189,41 +193,54 @@ def main():
         xl, yl, zl = iterator(x, y, z, coeff, T_SEARCH, 10)
         
         if zl[-1] <= 10:
-            if pixel_density(xl, yl):
-                ATT_COEFFS.append(coeff)
-                N_ATTRACTORS += 1
+            if pixel_density(xl, yl, coeff):
+                att_coeffs.append(coeff)
+                n_attractors += 1
     print("")
+    return att_coeffs
+
+def plot_attractors(att_coeffs):
+    for i, coeff in enumerate(att_coeffs, 1):
      
-    for i, coeff in enumerate(ATT_COEFFS):
-     
-        start = time.time()
-        print("\nAttractor: {} | {}/{}".format(coeff_to_string(coeff), i+1, MAX_ATTRACTORS))
+        print("\nAttractor: {} | {}/{}".format(coeff_to_string(coeff), i, len(att_coeffs)))
         print("Iterating {} steps".format(T_RENDER))
+        start = time.time()
         
         x, y, z = 0, 0, 0
         xl, yl, zl = iterator(x, y, z, coeff, T_IDX)
         x, y, z = xl[-1], yl[-1], zl[-1]
         
-        check = not np.isnan(x+y+z) # check for overflow
-     
-        if check:
-            xl, yl, zl = iterator(x, y, z, coeff, T_RENDER - T_IDX)
-            end = time.time()
-            print("Finished iteration: {:.1f} sec | {} iterations per second".format((end-start), T_RENDER/(end-start)))
-     
-            start = time.time()
-            save_image(xl[T_IDX:], yl[T_IDX:], zl[T_IDX:], plane="xy")
-           
-            start = time.time()
-            save_image(xl[T_IDX:], zl[T_IDX:], yl[T_IDX:], plane="xz")
-     
-            start = time.time()
-            save_image(yl[T_IDX:], zl[T_IDX:], xl[T_IDX:], plane="yz")
-     
-        else:
+        if np.isnan(x+y+z):
             print("Error during calculation")
-       
-        i += 1
+            continue
+
+        xl, yl, zl = iterator(x, y, z, coeff, T_RENDER - T_IDX)
+        end = time.time()
+        print("Finished iteration: {:.1f} sec | {} iterations per second".format((end-start), T_RENDER/(end-start)))
+ 
+        save_image(xl[T_IDX:], yl[T_IDX:], zl[T_IDX:], coeff, plane="xy")
+        save_image(xl[T_IDX:], zl[T_IDX:], yl[T_IDX:], coeff, plane="xz")
+        save_image(yl[T_IDX:], zl[T_IDX:], xl[T_IDX:], coeff, plane="yz")
+
+def seed_check(seed):
+    symbols_valid = all(ord("A") <= ord(c) <= ord("Y") for c in seed.upper())
+    if symbols_valid and len(seed) == 60:
+        return seed
+    raise ArgumentTypeError("Seed must contain exactly 60 characters in range A-Y inclusive")
+
+def main():
+    parser = ArgumentParser(description="Plots strange attractors")
+    parser.add_argument("--seed", dest="seed", action="store", nargs=1, type=seed_check,
+            help="an alphabetical seed representing the coefficients of the attractor")
+    args = parser.parse_args()
+
+    if args.seed:
+        att_coeffs = [coeff_from_str(args.seed[0])]
+    else:
+        att_coeffs = search_attractors(MAX_ATTRACTORS)
+
+    plot_attractors(att_coeffs)
+     
 
 if __name__ == "__main__":
     main()
