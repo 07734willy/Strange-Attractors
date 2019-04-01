@@ -12,8 +12,9 @@
 # Image files
 **.png
 
-# Callgrind profiling info
+# Callgrind and cachegrind profiling info
 **callgrind.out.*
+**cacherind.out.*
 
 # C port program
 render
