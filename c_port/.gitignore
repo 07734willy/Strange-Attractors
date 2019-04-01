@@ -7,7 +7,13 @@
 **.swo
 
 # Kernprof profiling info
-**.prof
+**.lprof
 
 # Image files
 **.png
+
+# Callgrind profiling info
+**callgrind.out.*
+
+# C port program
+render
