@@ -104,6 +104,33 @@ def reshape_coordinates(coordinates):
 	""" reshape coordinates to align with coefficient array """
 	return tdot(coordinates, tdot(coordinates, coordinates, axes=0), axes=0)
 
+def make_coefficients(d):
+	""" generate array of cubic coefficients """
+
+	coefficients = np.zeros((d,d+1,d+1,d+1))
+
+	for X in range(d):
+		for i in range(d + 1):
+			for j in range(d + 1):
+				for k in range(d + 1):
+					if i == j and i == k:
+						coefficients[X, i, j, k] = np.random.uniform(-10, 11)/(10+2*d)
+					elif i != j and j != k and k != i:
+						a = np.random.randint(-10, 11)/(10+2*d)
+						coefficients[X, i, j, k] = a/6
+						coefficients[X, i, k, j] = a/6
+						coefficients[X, j, i, k] = a/6
+						coefficients[X, j, k, i] = a/6
+						coefficients[X, k, i, j] = a/6
+						coefficients[X, k, j, i] = a/6
+					else:
+						b = np.random.randint(-10, 11)/(10+2*d)
+						coefficients[X, i, j, k] = b/3
+						coefficients[X, j, k, i] = b/3
+						coefficients[X, k, i, j] = b/3
+
+	return coefficients
+
 def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 
 	dims = ['x','y','z','u','v','w','q','r','s','t']
@@ -163,7 +190,7 @@ def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 
 N_ATTRACTORS = 0 				# initialize number of attractors
 MAX_ATTRACTORS = 20	 			# number of attractors to search for
-DIMENSION = 8
+DIMENSION = 8				    # max = 10
 T_SEARCH = 2000 				# number of iterations to perform during search
 T_RENDER = int(5e6) 			# number of iterations to perform during render
 T_IDX = int(0.01 * T_RENDER) 	# first index after transient
@@ -178,28 +205,7 @@ while N_ATTRACTORS < MAX_ATTRACTORS:
 	seed = np.random.randint(0,1e9)
 	np.random.seed(seed)
 
-	coefficients = np.zeros((d,d+1,d+1,d+1))
-
-	for X in range(d):
-		for i in range(d + 1):
-			for j in range(d + 1):
-				for k in range(d + 1):
-					if i == j and i == k:
-						coefficients[X, i, j, k] = np.random.uniform(-10, 11)/(10+2*d)
-					elif i != j and j != k and k != i:
-						a = np.random.randint(-10, 11)/(10+2*d)
-						coefficients[X, i, j, k] = a/6
-						coefficients[X, i, k, j] = a/6
-						coefficients[X, j, i, k] = a/6
-						coefficients[X, j, k, i] = a/6
-						coefficients[X, k, i, j] = a/6
-						coefficients[X, k, j, i] = a/6
-					else:
-						b = np.random.randint(-10, 11)/(10+2*d)
-						coefficients[X, i, j, k] = b/3
-						coefficients[X, j, k, i] = b/3
-						coefficients[X, k, i, j] = b/3
-
+	coefficients = make_coefficients(d)
 	coordinates = np.zeros(d + 1)
 	coordinates[0] = 1
 
