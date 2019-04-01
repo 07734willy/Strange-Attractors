@@ -1,0 +1,13 @@
+# Object files
+**.o
+**.so
+
+# Vim temporary files
+**.swp
+**.swo
+
+# Kernprof profiling info
+**.prof
+
+# Image files
+**.png
