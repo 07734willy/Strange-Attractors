@@ -69,22 +69,28 @@ void printCoeffs(double *coeffs) {
 	printf("\n");
 }
 
-double recursiveEval(double factor, double *position, int ndim, double **coeffs, int order) {
+void recursiveEval(double *dest, int numCoeffs, double factor, double *position, int ndim, double **coeffs, int order) {
 	/* evaluator that computes the sum of terms for a subset of the original multinomial */
-	if (!order)
-		return factor * *((*coeffs)++);
+	if (!order) {
+		for (int i = 0; i < NUM_DIMENSIONS; i++)
+			dest[i] += factor * (*coeffs)[i * numCoeffs];
+		(*coeffs)++;
+		return;
+	}
 	
-	double sum = 0;
 	for (int i = 0; i < ndim; i++)
-		sum += recursiveEval(factor * position[i], position + i, ndim - i, coeffs, order - 1);
-	
-	return sum;
+		recursiveEval(dest, numCoeffs, factor * position[i], position + i, ndim - i, coeffs, order - 1);
 }
 
-double evaluateNDStep(double *position, double *coeffs) {
+void evaluateNDStep(double *dest, double *position, double *coeffs) {
 	/* serves as a wrapper around `recursiveEval` */
 	double *coefficients = coeffs;
-	return recursiveEval(1, position, NUM_DIMENSIONS + 1, &coefficients, ORDER);
+	int numCoeffs = countCoeff(NUM_DIMENSIONS, ORDER);
+
+	for (int i = 0; i < NUM_DIMENSIONS; i++)
+		dest[i] = 0;
+
+	recursiveEval(dest, numCoeffs, 1, position, NUM_DIMENSIONS + 1, &coefficients, ORDER);
 }
 
 int trajectoryEscapes(double *coeffs, double radius) {
@@ -96,14 +102,13 @@ int trajectoryEscapes(double *coeffs, double radius) {
 	int numCoeff = countCoeff(NUM_DIMENSIONS, ORDER);
 
 	for (int i = 0; i < T_SEARCH - 1; i += 2) {
-		for (int j = 0; j < NUM_DIMENSIONS; j++)
-			oddPos[j + 1] = evaluateNDStep(evenPos, coeffs + numCoeff * j);
-
+		evaluateNDStep(oddPos + 1, evenPos, coeffs);
+		evaluateNDStep(evenPos + 1, oddPos, coeffs);
+		
 		double dist = 0;
-		for (int j = 0; j < NUM_DIMENSIONS; j++) {
-			evenPos[j + 1] = evaluateNDStep(oddPos, coeffs + numCoeff * j);
-			dist += evenPos[j + 1] * evenPos[j + 1];
-		}
+		for (int j = 0; j < NUM_DIMENSIONS; j++)
+			dist += evenPos[j] * evenPos[j];
+
 		if (dist > radius * radius)
 			return 1;
 	}
@@ -120,11 +125,8 @@ int trajectoryIterate(double* dest, double *coeffs, int start, int end) {
 
 	feclearexcept(FE_OVERFLOW);
 	for (int i = 0; i < start - 1; i += 2) {
-		for (int j = 0; j < NUM_DIMENSIONS; j++)
-			oddPos[j + 1] = evaluateNDStep(evenPos, coeffs + numCoeff * j); // TODO fix these hard-coded 20's
-
-		for (int j = 0; j < NUM_DIMENSIONS; j++)
-			evenPos[j + 1] = evaluateNDStep(oddPos, coeffs + numCoeff * j);
+		evaluateNDStep(oddPos + 1, evenPos, coeffs);
+		evaluateNDStep(evenPos + 1, oddPos, coeffs);
 	}
 	
 	if (fetestexcept(FE_OVERFLOW)) {
@@ -133,8 +135,7 @@ int trajectoryIterate(double* dest, double *coeffs, int start, int end) {
 	}
 
 	for (int i = 0; i < NUM_DIMENSIONS * (end - (start & ~1)); i += NUM_DIMENSIONS) {
-		for (int j = 0; j < NUM_DIMENSIONS; j++)
-			dest[i + j] = evaluateNDStep(evenPos, coeffs + numCoeff * j);
+		evaluateNDStep(dest + i, evenPos, coeffs);
 		memcpy(evenPos + 1, dest + i, NUM_DIMENSIONS * sizeof(double));
 	}
 	return 1;

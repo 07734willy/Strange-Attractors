@@ -9,7 +9,7 @@
 #define MIN_DENSITY 0.15
 #define DENSITY_SCALE 25
 
-#define NUM_DIMENSIONS 3
+#define NUM_DIMENSIONS 4
 #define ORDER 3
 
 #define NUM_POSITIONS (T_RENDER - T_IDX)
