@@ -10,6 +10,7 @@ double xmin, ymin, zmin;
 double xmax, ymax, zmax;
 
 void setRangeLimits(double* positions, int length) {
+	/* sets the global min/max variables for the positions visited */
 	xmin = xmax = positions[0];
 	ymin = ymax = positions[1];
 	zmin = zmax = positions[2];
@@ -34,6 +35,7 @@ void setRangeLimits(double* positions, int length) {
 }
 
 void scalePositions(double *positions, int length, int xres, int yres) {
+	/* scales the positions to fill the viewing screen exactly */
 	for (int i = 0; i < 3 * length; i += 3) {
 		positions[i + 0] = (positions[i + 0] - xmin) * (xres-1.0) / (xmax-xmin);
 		positions[i + 1] = (positions[i + 1] - ymin) * (yres-1.0) / (ymax-ymin);
@@ -42,6 +44,7 @@ void scalePositions(double *positions, int length, int xres, int yres) {
 }
 
 void sumAlpha(double *dest, double *positions, int length, int xres, int yres) {
+	/* calculates the sum of the binned points, with alpha values, stored as RGB pixels */
 	for (int i = 3; i < 3 * length; i += 3) {
 		int x = (int)positions[i + 0];
 		int y = (int)positions[i + 1];
@@ -59,7 +62,7 @@ void sumAlpha(double *dest, double *positions, int length, int xres, int yres) {
 }
 
 void rgbToBGRA(uint8_t *dest, double *channels) {
-	//int count = 0;
+	/* converts an RGB array to BGRA format */
 	for (int i = 0; i < XRES * YRES; i++) {
 		int r = (int)(255 * channels[3 * i + 0]);
 		int g = (int)(255 * channels[3 * i + 1]);
@@ -68,26 +71,27 @@ void rgbToBGRA(uint8_t *dest, double *channels) {
 		dest[4 * i + 0] = b > 255 ? 255 : b;
 		dest[4 * i + 1] = g > 255 ? 255 : g;
 		dest[4 * i + 2] = r > 255 ? 255 : r;
-		
-		//count += b > 0 || g > 0 || r > 0;
 	}
-	//printf("count: %d\n", count);
 }
 
+void selectAxes(double *dest, double *positions, int xAxis, int yAxis, int zAxis) {
+	/* selects three axes to render the n-dimensional attractor in */
+	for (int i = 0; i < NUM_POSITIONS; i++) {
+		dest[i + 0] = positions[i * NUM_DIMENSIONS + xAxis];
+		dest[i + 1] = positions[i * NUM_DIMENSIONS + yAxis];
+		dest[i + 2] = positions[i * NUM_DIMENSIONS + zAxis];
+	}
+}
 void positionsToBGRA(uint8_t *dest, double *positions) {
-
+	/* calculate the BGRA pixel values of the positions after binning */
 	double *transformed = malloc(3 * NUM_POSITIONS * sizeof(double));
 	double *channels = calloc(3 * XRES * YRES, sizeof(double));
 	
-	// TODO add in logic to transform / rotate
+	selectAxes(transformed, positions, 0, 1, 2);
 	
-	memcpy(transformed, positions, 3 * NUM_POSITIONS * sizeof(double));
-	
-	//printSlice(transformed, 0, 90, 1);
 	setRangeLimits(transformed, NUM_POSITIONS);
 	scalePositions(transformed, NUM_POSITIONS, XRES, YRES);
 
-	//printSlice(transformed, 0, 90, 1);
 	sumAlpha(channels, transformed, NUM_POSITIONS, XRES, YRES);
 	rgbToBGRA(dest, channels);
 	
@@ -96,6 +100,7 @@ void positionsToBGRA(uint8_t *dest, double *positions) {
 }
 
 int checkPixelDensity(double* positions) {
+	/* check that the attractor fills a sufficient number of pixels in the view */
 	setRangeLimits(positions, T_SEARCH);
 	scalePositions(positions, T_SEARCH, XRES/DENSITY_SCALE, YRES/DENSITY_SCALE);
 
@@ -110,6 +115,8 @@ int checkPixelDensity(double* positions) {
 
 		count += b > 0 || g > 0 || r > 0;
 	}
+
+	free(channels);
 
 	return count >= (XRES/DENSITY_SCALE) * (YRES/DENSITY_SCALE) * MIN_DENSITY;
 }

@@ -9,9 +9,13 @@
 #define MIN_DENSITY 0.15
 #define DENSITY_SCALE 25
 
+#define NUM_DIMENSIONS 3
+#define ORDER 3
+
 #define NUM_POSITIONS (T_RENDER - T_IDX)
 
 double* generateAttractor(char *seed);
 void printSlice(double *array, int start, int end, int stride);
+void testNDEval(void);
 
 #endif

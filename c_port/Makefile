@@ -1,5 +1,16 @@
-all:
-	gcc render.c attractor.c transform.c -g -Ofast -funsafe-math-optimizations -lX11 -lm -o render
+CC=gcc
+CFLAGS=-g -Ofast -funsafe-math-optimizations
+LIBS=-lX11 -lm
+DEPS = render.h attractor.h transform.h
+OBJ =  render.o attractor.o transform.o
+
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+all: $(OBJ)
+	$(CC) -o render $(OBJ) $(CFLAGS) $(LIBS)
 
 clean:
-	$(RM) render
+	rm -f *.o render
+
+.PHONY: all clean

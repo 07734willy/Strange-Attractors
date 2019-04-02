@@ -15,6 +15,7 @@ Visual *visual;
 Window win;
 
 void updateXImage(XImage *img, uint8_t r, uint8_t g, uint8_t b) {
+	/* updates the XImage to be filled with a solid RGB color */
 	for (int i = 0; i < 4 * img->width * img->height; i += 4) {
 		img->data[i + 0] = b;
 		img->data[i + 1] = g;
@@ -23,6 +24,7 @@ void updateXImage(XImage *img, uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void initXWindows(void) {
+	/* perform initialization logic for the XWindow, storing values in global constants */
 	display = XOpenDisplay(NULL);
 	screen = DefaultScreen(display);
 	root = RootWindow(display, screen);
@@ -38,6 +40,7 @@ void initXWindows(void) {
 }
 
 void renderXImage(XImage *img) {
+	/* main event loop which catches events and handles them appropriately */
 	GC defaultGC = DefaultGC(display, screen);
 	int mouseDown = 0;
 	
@@ -72,6 +75,7 @@ void renderXImage(XImage *img) {
 
 
 int main(int argc,char **argv) {
+	/* entry point, seeds the RNG and creates the windows and attractors */
 	initXWindows();
 	
 	srand(2234);
@@ -81,6 +85,7 @@ int main(int argc,char **argv) {
 	srand(4440); // REALLY BLUE
 	srand(7540); // mostly empty
 	srand(3452);
+	srand(1);
 	char *data = malloc(XRES * YRES * 4);
 	XImage *img = XCreateImage(display, visual, DefaultDepth(display, screen), ZPixmap,
 			0, data, XRES, YRES, 32, 0);
@@ -92,7 +97,7 @@ int main(int argc,char **argv) {
 	char seed3[] = "KLYCUAVJBAQBNUDRICOHHKPVIHIBSPIDDHHBJFKLFEOVBTPJWGSGRKCARNBM";
 	char seed4[] = "PIIGEDYLHLKWHQXFCUPHPRNGSBIYBYSTKDAOGCCONONUGMDKJSRBMFJFJSGK";
 
-	double *attractor = generateAttractor(seed4);
+	double *attractor = generateAttractor(NULL);
 
 	printf("Attractor constructed\n");
 	positionsToBGRA(img->data, attractor);
@@ -101,5 +106,8 @@ int main(int argc,char **argv) {
 	renderXImage(img);
 
 	XCloseDisplay(display);
+	free(attractor);
+	free(data);
+	
 	return 0;
 }
