@@ -69,33 +69,31 @@ void printCoeffs(double *coeffs) {
 	printf("\n");
 }
 
-void partialEval(double *dest, int numCoeffs, double factor, double **coeffs) {
+void partialEval(double *dest, double factor, double **coeffs) {
 	for (int i = 0; i < NUM_DIMENSIONS; i++)
-		dest[i] += factor * (*coeffs)[i * numCoeffs];
-	(*coeffs)++;
+		dest[i] += factor * (*coeffs)[i];
+	*coeffs += NUM_DIMENSIONS;
 }
 
-void recursiveEval(double *dest, int numCoeffs, double factor, double *position, int ndim, double **coeffs, int order) {
+void recursiveEval(double *dest, double factor, double *position, int ndim, double **coeffs, int order) {
 	/* evaluator that computes the sum of terms for a subset of the original multinomial */
-	partialEval(dest, numCoeffs, factor, coeffs);
+	partialEval(dest, factor, coeffs);
 
 	for (int i = 0; i < ndim; i++) {
 		if (order > 1)
-			recursiveEval(dest, numCoeffs, factor * position[i], position + i, ndim - i, coeffs, order - 1);
+			recursiveEval(dest, factor * position[i], position + i, ndim - i, coeffs, order - 1);
 		else
-			partialEval(dest, numCoeffs, factor, coeffs);
+			partialEval(dest, factor, coeffs);
 	}
 }
 
 void evaluateNDStep(double *dest, double *position, double *coeffs) {
 	/* serves as a wrapper around `recursiveEval` */
 	double *coefficients = coeffs;
-	int numCoeffs = countCoeff(NUM_DIMENSIONS, ORDER);
-
 	for (int i = 0; i < NUM_DIMENSIONS; i++)
 		dest[i] = 0;
 
-	recursiveEval(dest, numCoeffs, 1, position, NUM_DIMENSIONS, &coefficients, ORDER);
+	recursiveEval(dest, 1, position, NUM_DIMENSIONS, &coefficients, ORDER);
 }
 
 int trajectoryEscapes(double *coeffs, double radius) {
