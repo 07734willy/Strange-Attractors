@@ -86,6 +86,7 @@ int main(int argc,char **argv) {
 	srand(7540); // mostly empty
 	srand(3452);
 	srand(1);
+	srand(4);
 	char *data = malloc(XRES * YRES * 4);
 	XImage *img = XCreateImage(display, visual, DefaultDepth(display, screen), ZPixmap,
 			0, data, XRES, YRES, 32, 0);
