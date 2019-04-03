@@ -17,7 +17,6 @@ def iterator(x,y,coeff):
 	return x,y
 
 def coeff_to_string(coeff):
-
 	att_string = ''.join([chr(int((c + 7.7)*10)) for c in coeff])
 	return att_string
 
@@ -58,13 +57,14 @@ def render_basins(coeff, xres, yres, xmin, xmax, max_iters, radius):
 
 	xrng = xmax - xmin
 	yrng = yres/xres * xrng
-	ymin = -yrng/2; ymax = yrng/2
+	ymin = -yrng/2 
+	ymax = yrng/2
 
 	print 'Rendering basin'
 	print coeff_to_string(coeff)
 	print 'Max iterations: %d' % max_iters
 
-	render = np.zeros((yres,xres))
+	render = np.zeros((yres,xres,3))
 
 	for X in range(xres):
 		for Y in range(yres):
@@ -79,11 +79,18 @@ def render_basins(coeff, xres, yres, xmin, xmax, max_iters, radius):
 				rr = x*x + y*y
 				i += 1
 
-			render[Y,X] = i
+			render[Y,X,0] = i
+			render[Y,X,1] = abs(x)
+			render[Y,X,2] = abs(y)
+
+	for i in range(3):
+		render[:,:,i] /= render[:,:,i].max()
 
 	fname = coeff_to_string(coeff) + '.png'
 
-	plt.imsave(fname,render,cmap='bone',vmin=render.min(),vmax=render.max(),dpi=300)
+	plt.imsave(fname, render, cmap='bone',
+		vmin=render.min(), vmax=render.max(), dpi=300)
+
 	end = time.time()
 	print '%.2f sec' % (end - start)
 
@@ -94,18 +101,16 @@ att_coeffs, esc_iters = find_coeffs(
 	low_iters = 100, 
 	high_iters = 1000,
 	radius = 1000,
-	max_attractors = 1)
+	max_attractors = 5)
 
 print ''
 for coeff,esc_iter in zip(att_coeffs,esc_iters):
-	# low res (test)
+
 	print 'Max number of operations: %d' % (xres*yres*esc_iter)
-	render_basins(coeff, xres=xres, yres=yres, xmin=-2, xmax=2, max_iters=esc_iter,radius=100)
-	# render_basins(coeff,xres=xres,yres=yres,xmin=-5,xmax=5,max_iters=100,radius=10)
-
-
-	# high res
-	# render_basins(coeff,xres=1600,yres=1200,xmin=-5,xmax=5,max_iters=esc_iters,radius=1000)
+	
+	render_basins(coeff, xres=xres, yres=yres, xmin = -4, xmax = 4, 
+		max_iters = 256, radius=100)
+	
 	print ''
 
 
