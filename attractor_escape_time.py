@@ -21,12 +21,13 @@ def coeff_to_string(coeff):
 	att_string = ''.join([chr(int((c + 7.7)*10)) for c in coeff])
 	return att_string
 
-def find_coeffs(low_iters,high_iters,radius,attempts):
+def find_coeffs(low_iters, high_iters, radius, max_attractors = 1):
 
 	att_coeffs = []
 	esc_iters = []
+	attractors = 0
 
-	for a in range(attempts):
+	while attractors < max_attractors:
 
 		coeff = np.random.randint(-12,13,12)/10
 		x,y = 0,0
@@ -46,16 +47,17 @@ def find_coeffs(low_iters,high_iters,radius,attempts):
 					print 'Saved coefficients'
 					print t
 					print coeff_to_string(coeff)
+					attractors += 1
 					break
 
 	return att_coeffs,esc_iters
 
-def render_basins(coeff,xres,yres,xmin,xmax,max_iters,radius):
+def render_basins(coeff, xres, yres, xmin, xmax, max_iters, radius):
 
 	start = time.time()
 
 	xrng = xmax - xmin
-	yrng = 0.75 * xrng
+	yrng = yres/xres * xrng
 	ymin = -yrng/2; ymax = yrng/2
 
 	print 'Rendering basin'
@@ -86,14 +88,19 @@ def render_basins(coeff,xres,yres,xmin,xmax,max_iters,radius):
 	print '%.2f sec' % (end - start)
 
 xres = 1600
-yres = 1200
+yres = 900
 
-att_coeffs,esc_iters = find_coeffs(low_iters=100,high_iters=1000,radius=1000,attempts=1000)
+att_coeffs, esc_iters = find_coeffs(
+	low_iters = 100, 
+	high_iters = 1000,
+	radius = 1000,
+	max_attractors = 1)
+
 print ''
 for coeff,esc_iter in zip(att_coeffs,esc_iters):
 	# low res (test)
 	print 'Max number of operations: %d' % (xres*yres*esc_iter)
-	render_basins(coeff,xres=xres,yres=yres,xmin=-2,xmax=2,max_iters=esc_iter,radius=100)
+	render_basins(coeff, xres=xres, yres=yres, xmin=-2, xmax=2, max_iters=esc_iter,radius=100)
 	# render_basins(coeff,xres=xres,yres=yres,xmin=-5,xmax=5,max_iters=100,radius=10)
 
 
