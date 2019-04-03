@@ -188,12 +188,12 @@ def save_image(iterates, alpha=0.035, xres=3200, yres=1800):
 		print 'Saved ' + fname
 		print '%.2f sec' % (end-start)
 
-N_ATTRACTORS = 0 				# initialize number of attractors
-MAX_ATTRACTORS = 20	 			# number of attractors to search for
-DIMENSION = 8				    # max = 10
-T_SEARCH = 2000 				# number of iterations to perform during search
-T_RENDER = int(5e6) 			# number of iterations to perform during render
-T_IDX = int(0.01 * T_RENDER) 	# first index after transient
+N_ATTRACTORS = 0 # initialize number of attractors
+MAX_ATTRACTORS = 20	# number of attractors to search for
+DIMENSION = 8 # max = 10
+T_SEARCH = 2000 # number of iterations to perform during search
+T_RENDER = int(5e6) # number of iterations to perform during render
+T_IDX = int(0.01 * T_RENDER) # first index after transient
 
 ATT_COEFFS = [] # list for storing coefficients           
 ATT_SEED   = [] # list for storing seeds
