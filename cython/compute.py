@@ -6,7 +6,7 @@ def compute_attractors(coeffs, render_iterates, render_check_ratio,dimension):
 
 	check_index = int(render_iterates * render_check_ratio)
 
-	itdata = np.asarray(iteration_cubic_8d(check_index,coeffs,dimension))
+	itdata = np.asarray(iteration_cubic_8d(check_index, coeffs, dimension))
 
 	if np.isnan(itdata[-1,-1]) or np.isinf(itdata[-1,-1]):
 		print('Error during calculation')
