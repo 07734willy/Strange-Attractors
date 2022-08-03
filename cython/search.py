@@ -1,7 +1,9 @@
-from iterator_cubic_8d import iteration_cubic_8d
 from functions import pixel_density
 import numpy as np
 import time 
+
+# this should be compiled first
+from iterator_cubic_8d import iteration_cubic_8d
 
 def search_attractors(search_iterates, dimension):
 
@@ -12,7 +14,10 @@ def search_attractors(search_iterates, dimension):
 	d = dimension
 
 	ncoeffs = int(d + 11/6 * d**2 + d**3 + d**4/6)
-	seed = 1750718977 # np.random.randint(1, 2e9)
+
+
+	seed = 1750718977 
+	# np.random.randint(1, 2e9)
 	# np.random.seed()
 
 	while not found:

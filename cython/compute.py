@@ -1,6 +1,9 @@
-from iterator_cubic_8d import iteration_cubic_8d
 import time
 import numpy as np
+
+# this should be compiled first (see setup files)
+from iterator_cubic_8d import iteration_cubic_8d
+
 
 def compute_attractors(coeffs, render_iterates, render_check_ratio,dimension):
 
@@ -13,7 +16,7 @@ def compute_attractors(coeffs, render_iterates, render_check_ratio,dimension):
 		error = True
 	else:
 		start = time.time()
-		itdata = np.asarray(iteration_cubic_8d(render_iterates,coeffs,dimension))
+		itdata = np.asarray(iteration_cubic_8d(render_iterates, coeffs, dimension))
 		end = time.time()
 		print(f'Iteration complete: {end-start:.2f} seconds')
 		error = False
